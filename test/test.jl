@@ -12,4 +12,8 @@ setrhs!(sdp, 2, 1.0)
 
 sol = solve(sdp, CSDP())
 
-println(primalmatrix(sol))
+X = primalmatrix(sol)
+println(X)
+@test_approx_eq_eps(X[1,1,2], 1, 1e-6)
+@test_approx_eq_eps(X[1,2,2], 1, 1e-6)
+@test_approx_eq_eps(X[1,1,1], 1, 1e-6)

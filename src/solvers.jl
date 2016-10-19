@@ -1,4 +1,7 @@
-abstract SDPSolver
+abstract AbstractSDPModel <: AbstractMathProgModel
+export AbstractSDPModel
+
+abstract SDPSolver <: AbstractMathProgSolver
 
 verbose(solver::SDPSolver) = solver.verbose
 
