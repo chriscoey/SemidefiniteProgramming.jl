@@ -1,7 +1,7 @@
-abstract AbstractSDPModel <: AbstractMathProgModel
+abstract AbstractSDPModel <: MathProgBase.AbstractMathProgModel
 export AbstractSDPModel
 
-abstract SDPSolver <: AbstractMathProgSolver
+abstract SDPSolver <: MathProgBase.AbstractMathProgSolver
 
 verbose(solver::SDPSolver) = solver.verbose
 
@@ -17,8 +17,8 @@ immutable SDPA <: SDPAGEN
     verbose::Bool
 end
 
-SDPA(; speed::Integer=0, 
-       executable::String="sdpa", 
+SDPA(; speed::Integer=0,
+       executable::String="sdpa",
        verbose::Bool=false) = SDPA(speed, executable, verbose)
 
 
@@ -28,8 +28,8 @@ immutable SDPAQD <: SDPAGEN
     verbose::Bool
 end
 
-SDPAQD(; speed::Integer=0, 
-         executable::String="sdpa_qd", 
+SDPAQD(; speed::Integer=0,
+         executable::String="sdpa_qd",
          verbose::Bool=false) = SDPAQD(speed, executable, verbose)
 
 
@@ -39,8 +39,8 @@ immutable SDPAGMP <: SDPAGEN
     verbose::Bool
 end
 
-SDPAGMP(; speed::Integer=0, 
-          executable::String="sdpa_gmp", 
+SDPAGMP(; speed::Integer=0,
+          executable::String="sdpa_gmp",
           verbose::Bool=false) = SDPAGMP(speed, executable, verbose)
 
 
@@ -64,7 +64,7 @@ function solve{T<:Real}(sdp::SparseSDP{T}, solver::SDPAGEN; io::IO=STDOUT, outpu
     flush(dataio)
     primalobjective = NaN
     dualobjective = NaN
-   
+
     for l in eachline(`$(executable(solver)) -ds $datafname -o $outputfname`)
         if verbose(solver)
             print(io, l)
@@ -79,7 +79,7 @@ function solve{T<:Real}(sdp::SparseSDP{T}, solver::SDPAGEN; io::IO=STDOUT, outpu
          end
     end
     close(dataio)
-    SparseSDPSolution(primalobjective, dualobjective) 
+    SparseSDPSolution(primalobjective, dualobjective)
 end
 
 function solve(sdp::SparseSDP, solver::CSDP; io::IO=STDOUT, outputfname=nothing)
@@ -99,7 +99,7 @@ function solve(sdp::SparseSDP, solver::CSDP; io::IO=STDOUT, outputfname=nothing)
     end
     writesdpasparse(dataio, sdp)
     close(dataio)
-    
+
     primalobjective = NaN
     dualobjective = NaN
     for l in eachline(`$(executable(solver)) $datafname $outputfname`)
@@ -118,9 +118,9 @@ function solve(sdp::SparseSDP, solver::CSDP; io::IO=STDOUT, outputfname=nothing)
     sol = SparseSDPSolution(primalobjective, dualobjective)
     readcsdpoutput!(outputio, sol, cm, bm, ems)
     close(outputio)
-    if removeoutputfname 
+    if removeoutputfname
         rm(outputfname)
     end
     rm(datafname)
-    sol   
+    sol
 end

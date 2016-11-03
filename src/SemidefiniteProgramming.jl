@@ -47,6 +47,7 @@ export
     readsdpai,
     loadsdpai
 
+using MathProgBase
 
 include("sparsesymmetricmatrix.jl")
 include("sparsesymmetricblockmatrix.jl")

@@ -7,8 +7,8 @@ using MathProgBase
 
 
 function readsdpai(all_bin::Bool, io::IO)
-    numvars = Int()
-    numblocks = Int()
+    numvars = 0
+    numblocks = 0
     sizeblocks = Vector{Int}()
     c = Vector{Float64}()
     indline = 0
@@ -18,23 +18,29 @@ function readsdpai(all_bin::Bool, io::IO)
 
         if !startswith(line, '*') && !startswith(line, '#') && !startswith(line, '\"') && length(line) > 0
             indline += 1
+            spline = split(line)
             if indline == 1
-                numvars = parse(Int, split(line)[1])
+                numvars = parse(Int, spline[1])
             elseif indline == 2
-                numblocks = parse(Int, split(line)[1])
+                numblocks = parse(Int, spline[1])
             elseif indline == 3
-                sizeblocks = [parse(Int, t) for t in split(line)[1:numblocks]]
+                sizeblocks = [parse(Int, spline[block]) for block in 1:numblocks]
             elseif indline == 4
-                c = [parse(Float64, t) for t in split(line)[1:numvars]]
+                c = [parse(Float64, spline[col]) for col in 1:numvars]
                 break
             end
         end
     end
 
-    indLPblock = find(size -> (sign(size) == -1), sizeblocks)
+    indLPblock = find(size -> (sign(size) == -1), sizeblocks)[1]
+    sizeblocks[indLPblock] = 0
     indPSDblocks = find(size -> (sign(size) == 1), sizeblocks)
 
-    numcons = sizeblocks[indLPblock] + sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
+    numcons = -sizeblocks[indLPblock] + sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
+    @show sizeblocks
+    @show typeof(sizeblocks)
+    @show sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
+    @show numcons
     b = zeros(numcons)
     A = spzeros(numcons, numvars)
 
