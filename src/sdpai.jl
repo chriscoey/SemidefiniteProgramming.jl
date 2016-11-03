@@ -117,9 +117,13 @@ end
 
 
 function loadsdpai(solver, filename::String; all_bin=false)
-    open(filename, 'r') do f
-        (c, A, b, con_cones, var_cones, var_types) = readsdpai(all_bin, f)
+    if endswith(filename, ".gz")
+        fd = gzopen(filename, "r")
+    else
+        fd = open(filename, "r")
     end
+    (c, A, b, con_cones, var_cones, var_types) = readsdpai(all_bin, fd)
+    close(fd)
 
     model = MathProgBase.ConicModel(solver)
     MathProgBase.loadproblem!(model, c, A, b, con_cones, var_cones)
