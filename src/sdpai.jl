@@ -32,12 +32,12 @@ function readsdpai(all_bin::Bool, io::IO)
         end
     end
 
-    indLPblock = find(size -> (sign(size) == -1), sizeblocks)[1]
-    indPSDblocks = find(size -> (sign(size) == 1), sizeblocks)
+    LPblock = find(size -> (sign(size) == -1), sizeblocks)[1]
+    PSDblocks = find(size -> (sign(size) == 1), sizeblocks)
 
-    sizeblocks[indLPblock] *= -1
+    sizeblocks[LPblock] *= -1
 
-    numcons = sizeblocks[indLPblock] + sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
+    numcons = sizeblocks[LPblock] + sum(binomial((sizeblocks[block] + 1), 2) for block in PSDblocks)
     b = zeros(numcons)
     A = spzeros(numcons, numvars)
 
@@ -49,24 +49,24 @@ function readsdpai(all_bin::Bool, io::IO)
 
         if !startswith(line, '*') && !startswith(line, '#') && !startswith(line, '"') && length(line) > 0
             linevec = split(line)
-            indvar = parse(Int, linevec[1])
-            indblock = parse(Int, linevec[2])
+            col = parse(Int, linevec[1])
+            block = parse(Int, linevec[2])
             i = parse(Int, linevec[3])
             j = parse(Int, linevec[4])
             v = parse(Float64, linevec[5])
 
-            if indblock == indLPblock
+            if block == LPblock
                 @assert i == j
-                if indvar == 0
+                if col == 0
                     b[i] = -v
                 else
-                    A[i,indvar] = -v
+                    A[i,col] = -v
                 end
             else
-                if indvar == 0
-                    bPSDs[indblock][i,j] = -v
+                if col == 0
+                    bPSDs[block][i,j] = -v
                 else
-                    APSDs[indblock,indvar][i,j] = -v
+                    APSDs[block,col][i,j] = -v
                 end
             end
         elseif startswith(line, "*INTEGER")
@@ -74,34 +74,51 @@ function readsdpai(all_bin::Bool, io::IO)
         end
     end
 
+    dropzeros!(A)
+
+    function ind_svec(n::Int, i::Int, j::Int)::Int
+        indmin = min(i,j)
+        indmax = max(i,j)
+
+        accum = indmax + 1 - indmin
+        for k in 1:(indmin - 1)
+            accum += n + 1 - k
+        end
+        return accum
+    end
+
     varcones = Tuple{Symbol,Vector{Int}}[(:Free, collect(1:numvars))]
 
-    row = sizeblocks[indLPblock]
-    concones = Tuple{Symbol,Vector{Int}}[(:NonNeg, collect(1:row))]
+    rowend = sizeblocks[LPblock]
+    concones = Tuple{Symbol,Vector{Int}}[(:NonNeg, collect(1:rowend))]
+
+    sqrt2 = sqrt(2)
 
     for block in 1:numblocks
-        if block == indLPblock
+        if block == LPblock
             continue
         end
 
-        prevrow = row
-        for i in 1:sizeblocks[block], j in i:sizeblocks[block]
-            row += 1
+        rowendprev = rowend
 
-            b[row] = bPSDs[block][i,j]
-            if i != j
-                b[row] *= sqrt(2)
-            end
+        dropzeros!(bPSDs[block])
+        (I,J,V) = findnz(bPSDs[block])
+        for nzind in 1:length(V)
+            row = rowendprev + ind_svec(sizeblocks[block], I[nzind], J[nzind])
+            b[row] = (I[nzind] == J[nzind]) ? V[nzind] : V[nzind]*sqrt2
+        end
 
-            for col in 1:numvars
-                A[row,col] = APSDs[block,col][i,j]
-                if i != j
-                    A[row,col] *= sqrt(2)
-                end
+        for col in 1:numvars
+            dropzeros!(APSDs[block,col])
+            (I,J,V) = findnz(APSDs[block,col])
+            for nzind in 1:length(V)
+                row = rowendprev + ind_svec(sizeblocks[block], I[nzind], J[nzind])
+                A[row,col] = (I[nzind] == J[nzind]) ? V[nzind] : V[nzind]*sqrt2
             end
         end
 
-        push!(concones, (:SDP, collect(prevrow+1:row)))
+        rowend = rowendprev + binomial((sizeblocks[block] + 1), 2)
+        push!(concones, (:SDP, collect(rowendprev+1:rowend)))
     end
 
     vartypes = fill(:Cont, numvars)
@@ -127,13 +144,6 @@ function loadsdpai(solver, filename::String; all_bin=false)
     end
     (c, A, b, concones, varcones, vartypes) = readsdpai(all_bin, fd)
     close(fd)
-
-    @show c
-    @show A
-    @show b
-    @show concones
-    @show varcones
-    @show vartypes
 
     model = MathProgBase.ConicModel(solver)
     MathProgBase.loadproblem!(model, c, A, b, concones, varcones)
