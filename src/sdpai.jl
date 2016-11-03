@@ -33,10 +33,11 @@ function readsdpai(all_bin::Bool, io::IO)
     end
 
     indLPblock = find(size -> (sign(size) == -1), sizeblocks)[1]
-    sizeblocks[indLPblock] = 0
     indPSDblocks = find(size -> (sign(size) == 1), sizeblocks)
 
-    numcons = -sizeblocks[indLPblock] + sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
+    sizeblocks[indLPblock] *= -1
+
+    numcons = sizeblocks[indLPblock] + sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
     b = zeros(numcons)
     A = spzeros(numcons, numvars)
 
@@ -59,7 +60,7 @@ function readsdpai(all_bin::Bool, io::IO)
                 if indvar == 0
                     b[i] = -v
                 else
-                    A[i,j] = -v
+                    A[i,indvar] = -v
                 end
             else
                 if indvar == 0
@@ -68,15 +69,15 @@ function readsdpai(all_bin::Bool, io::IO)
                     APSDs[indblock,indvar][i,j] = -v
                 end
             end
-        elseif startswith(l, "*INTEGER")
+        elseif startswith(line, "*INTEGER")
             break
         end
     end
 
-    var_cones = Tuple{Symbol,Vector{Int}}[(:Free, collect(1:numvars))]
+    varcones = Tuple{Symbol,Vector{Int}}[(:Free, collect(1:numvars))]
 
-    row = -sizeblocks[indLPblock]
-    con_cones = Tuple{Symbol,Vector{Int}}[(:NonNeg, collect(1:row))]
+    row = sizeblocks[indLPblock]
+    concones = Tuple{Symbol,Vector{Int}}[(:NonNeg, collect(1:row))]
 
     for block in 1:numblocks
         if block == indLPblock
@@ -100,7 +101,7 @@ function readsdpai(all_bin::Bool, io::IO)
             end
         end
 
-        push!(con_cones, (:SDP, collect(prevrow+1:row)))
+        push!(concones, (:SDP, collect(prevrow+1:row)))
     end
 
     vartypes = fill(:Cont, numvars)
@@ -114,7 +115,7 @@ function readsdpai(all_bin::Bool, io::IO)
         end
     end
 
-    return (c, A, b, con_cones, var_cones, var_types)
+    return (c, A, b, concones, varcones, vartypes)
 end
 
 
@@ -124,12 +125,12 @@ function loadsdpai(solver, filename::String; all_bin=false)
     else
         fd = open(filename, "r")
     end
-    (c, A, b, con_cones, var_cones, var_types) = readsdpai(all_bin, fd)
+    (c, A, b, concones, varcones, vartypes) = readsdpai(all_bin, fd)
     close(fd)
 
     model = MathProgBase.ConicModel(solver)
-    MathProgBase.loadproblem!(model, c, A, b, con_cones, var_cones)
-    MathProgBase.setvartype!(model, var_types)
+    MathProgBase.loadproblem!(model, c, A, b, concones, varcones)
+    MathProgBase.setvartype!(model, vartypes)
 
     return model
 end
