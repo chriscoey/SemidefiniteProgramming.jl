@@ -1,3 +1,8 @@
+# Reads a SDPA file to create a MathProgBase conic model
+# Detects an LP block but does not currently detect SOC or SOCRotated cones
+# SDPA sparse format modified for integer constraints described at
+#   http://www.opt.tu-darmstadt.de/scipsdp/downloads/data_format.txt
+
 using MathProgBase
 
 
