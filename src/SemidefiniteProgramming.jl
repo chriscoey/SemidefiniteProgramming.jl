@@ -1,7 +1,7 @@
 module SemidefiniteProgramming
 
-import 
-    Base.print, 
+import
+    Base.print,
     Base.show,
     Base.getindex,
     Base.setindex!,
@@ -14,8 +14,8 @@ import
     Base.delete!,
     Base.(==),
     Base.isapprox
-    
-export 
+
+export
     SparseSDP,
     ismaximizationproblem,
     setmaximizationproblem!,
@@ -27,22 +27,26 @@ export
     cons,
     ncons,
     blocksizes,
-    
+
     writesdpasparse,
     readsdpasparse,
-    
+
     SparseSDPSolution,
     dualobj,
     primalmatrix,
     dualvector,
     dualmatrix,
-    
+
     SDPSolver,
     SDPA,
     SDPAQD,
     SDPAGMP,
     CSDP,
-    solve
+    solve,
+
+    readsdpai,
+    loadsdpai
+
 
 include("sparsesymmetricmatrix.jl")
 include("sparsesymmetricblockmatrix.jl")
@@ -51,5 +55,6 @@ include("normalization.jl")
 include("sdpasparse.jl")
 include("solvers.jl")
 include("sdpsolution.jl")
+include("sdpai.jl")
 
 end
