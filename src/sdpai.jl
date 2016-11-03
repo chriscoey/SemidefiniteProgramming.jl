@@ -37,10 +37,6 @@ function readsdpai(all_bin::Bool, io::IO)
     indPSDblocks = find(size -> (sign(size) == 1), sizeblocks)
 
     numcons = -sizeblocks[indLPblock] + sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
-    @show sizeblocks
-    @show typeof(sizeblocks)
-    @show sum(binomial((sizeblocks[ind] + 1), 2) for ind in indPSDblocks)
-    @show numcons
     b = zeros(numcons)
     A = spzeros(numcons, numvars)
 
