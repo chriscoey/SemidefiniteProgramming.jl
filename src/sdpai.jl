@@ -4,7 +4,7 @@
 #   http://www.opt.tu-darmstadt.de/scipsdp/downloads/data_format.txt
 
 using MathProgBase
-
+using GZip
 
 function readsdpai(all_bin::Bool, io::IO)
     numvars = 0
@@ -127,6 +127,13 @@ function loadsdpai(solver, filename::String; all_bin=false)
     end
     (c, A, b, concones, varcones, vartypes) = readsdpai(all_bin, fd)
     close(fd)
+
+    @show c
+    @show A
+    @show b
+    @show concones
+    @show varcones
+    @show vartypes
 
     model = MathProgBase.ConicModel(solver)
     MathProgBase.loadproblem!(model, c, A, b, concones, varcones)
